@@ -1,0 +1,129 @@
+import java.io.Console;
+import java.util.Scanner;
+
+import com.crystaldecisions.sdk.framework.CrystalEnterprise;
+import com.crystaldecisions.sdk.framework.IEnterpriseSession;
+import com.crystaldecisions.sdk.occa.infostore.IInfoObject;
+import com.crystaldecisions.sdk.occa.infostore.IInfoObjects;
+import com.crystaldecisions.sdk.occa.infostore.IInfoStore;
+
+public class BOConnectionTest {
+
+    public static void main(String[] args) {
+
+        if (args.length < 3) {
+            System.out.println(
+                "Usage: BOConnectionTest <CMS:PORT> <USERNAME> <AUTHENTICATION>"
+            );
+            System.out.println(
+                "Example: BOConnectionTest boserver:6400 Administrator secEnterprise"
+            );
+            System.exit(1);
+        }
+
+        String cms = args[0];
+        String username = args[1];
+        String authentication = args[2];
+
+        String password = readPassword();
+
+        IEnterpriseSession session = null;
+
+        try {
+            System.out.println();
+            System.out.println("==========================================");
+            System.out.println(" SAP BusinessObjects SDK Connection Test");
+            System.out.println("==========================================");
+            System.out.println("CMS            : " + cms);
+            System.out.println("Username       : " + username);
+            System.out.println("Authentication : " + authentication);
+            System.out.println();
+            System.out.println("Connecting...");
+
+            session = CrystalEnterprise
+                    .getSessionMgr()
+                    .logon(username, password, cms, authentication);
+
+            System.out.println("LOGIN SUCCESSFUL");
+            System.out.println("CMS connected.");
+
+            IInfoStore infoStore =
+                    (IInfoStore) session.getService("InfoStore");
+
+            System.out.println();
+            System.out.println("Running test CMS query...");
+
+            String query =
+                "SELECT TOP 20 " +
+                "SI_ID, SI_CUID, SI_NAME, SI_KIND, SI_PARENTID " +
+                "FROM CI_INFOOBJECTS " +
+                "WHERE SI_INSTANCE=0 " +
+                "ORDER BY SI_NAME";
+
+            IInfoObjects objects = infoStore.query(query);
+
+            System.out.println();
+            System.out.println(
+                "Objects returned: " + objects.size()
+            );
+            System.out.println("------------------------------------------");
+
+            for (int i = 0; i < objects.size(); i++) {
+
+                IInfoObject obj =
+                        (IInfoObject) objects.get(i);
+
+                System.out.println(
+                    "ID=" + obj.getID()
+                    + " | KIND=" + obj.getKind()
+                    + " | NAME=" + obj.getTitle()
+                    + " | CUID=" + obj.getCUID()
+                );
+            }
+
+            System.out.println("------------------------------------------");
+            System.out.println();
+            System.out.println(
+                "TEST SUCCESSFUL - SDK and CMS connection are working."
+            );
+
+        } catch (Exception e) {
+
+            System.err.println();
+            System.err.println("TEST FAILED");
+            System.err.println("------------------------------------------");
+            System.err.println(e.getClass().getName());
+            System.err.println(e.getMessage());
+            System.err.println("------------------------------------------");
+
+            e.printStackTrace();
+
+        } finally {
+
+            if (session != null) {
+                try {
+                    session.logoff();
+                    System.out.println("Logged off.");
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    private static String readPassword() {
+
+        Console console = System.console();
+
+        if (console != null) {
+            char[] chars =
+                    console.readPassword("Password: ");
+
+            return new String(chars);
+        }
+
+        System.out.print("Password: ");
+
+        Scanner scanner = new Scanner(System.in);
+        return scanner.nextLine();
+    }
+}
